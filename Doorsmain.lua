@@ -1,8 +1,9 @@
 --[[ 
-    DOORS MASTER SCRIPT (English Version)
+    DOORS MASTER SCRIPT (Updated)
     - ESP Limit: 150 Studs (Anti-Lag)
-    - Full Light: Removed (Game remains dark)
-    - Features: Doors, Keys, Books, Entity Alerts
+    - Figure ESP: Red Highlight
+    - Anti-Lag: Auto-hides distant objects
+    - Full Light: Removed
 ]]
 
 local Players = game:GetService("Players")
@@ -14,23 +15,11 @@ local Config = {
     DoorColor = Color3.fromRGB(0, 255, 100),
     KeyColor = Color3.fromRGB(255, 220, 0),
     BookColor = Color3.fromRGB(0, 160, 255),
-    RushColor = Color3.fromRGB(255, 0, 0),
-    AmbushColor = Color3.fromRGB(150, 0, 255),
-    MaxDistance = 150, -- Items further than this will be hidden
+    RushColor = Color3.fromRGB(255, 0, 0),    -- Entity Alert Color
+    FigureColor = Color3.fromRGB(255, 0, 0),  -- Figure ESP Color (Red)
+    MaxDistance = 150,                        -- Anti-lag limit
     TextSize = 16
 }
-
-local function alertChat(message)
-    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-        if channel then channel:SendAsync(message) end
-    else
-        local event = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
-        if event and event:FindFirstChild("SayMessageRequest") then
-            event.SayMessageRequest:FireServer(message, "All")
-        end
-    end
-end
 
 local function applyESP(object, name, color)
     if not object:FindFirstChild("ObjectESP") then
@@ -62,25 +51,29 @@ local function applyESP(object, name, color)
     end
 end
 
-local rushFound, ambushFound = false, false
-
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local root = char.HumanoidRootPart
 
     for _, obj in pairs(workspace:GetDescendants()) do
-        -- Entity Detection (Always Priority)
+        -- 1. Figure ESP (Red Highlight)
+        if obj.Name == "FigureRagdoll" or (obj.Name == "Figure" and obj:IsA("Model")) then
+            applyESP(obj, "🚨 FIGURE", Config.FigureColor)
+        end
+
+        -- 2. Rush/Ambush Detection
         if obj.Name == "RushMoving" or obj.Name == "AmbushMoving" then
             applyESP(obj, "⚠️ ENTITY", Config.RushColor)
         end
 
-        -- Distance Logic for ESP
+        -- 3. 150 Studs Distance & Lag Prevention
         local bill = obj:FindFirstChild("ObjectESP")
         local high = obj:FindFirstChild("ESPHighlight")
         if bill and high then
             local dist = (obj.Position - root.Position).Magnitude
             if dist > Config.MaxDistance then
+                -- Hide distant items to prevent lag
                 bill.Enabled = false
                 high.Enabled = false
             else
@@ -102,11 +95,13 @@ task.spawn(function()
                 applyESP(obj, "🔑 Key", Config.KeyColor)
             elseif obj.Name == "Door" and obj:IsA("Model") then
                 local knob = obj:FindFirstChild("Knob") or obj.PrimaryPart
-                if knob then applyESP(knob, "🚪 Door", Config.DoorColor) end
+                if knob then 
+                    applyESP(knob, "🚪 Door", Config.DoorColor) 
+                end
             end
         end
         task.wait(2)
     end
 end)
 
-print("--- 150 Studs Optimized Script Loaded ---")
+print("Doors Script with Figure ESP Loaded")
